@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard — SkillConnect</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+
+<!-- Navbar fragment inline -->
+<nav class="navbar">
+    <a th:href="@{/}" class="navbar-brand"><span class="logo-icon">⚡</span> SkillConnect</a>
+    <ul class="navbar-nav">
+        <li><a th:href="@{/jobs}" class="nav-link">Browse Jobs</a></li>
+        <th:block sec:authorize="hasRole('SEEKER')">
+            <li><a th:href="@{/jobs/recommendations}" class="nav-link"><span class="nav-badge">AI</span> Matched Jobs</a></li>
+            <li><a th:href="@{/profile}" class="nav-link">My Skills</a></li>
+            <li><a th:href="@{/dashboard}" class="nav-link active">Dashboard</a></li>
+            <li><span class="nav-role-badge seeker">Seeker</span></li>
+        </th:block>
+        <th:block sec:authorize="hasRole('EMPLOYER')">
+            <li><a th:href="@{/jobs/post}" class="nav-link">Post Job</a></li>
+            <li><a th:href="@{/dashboard}" class="nav-link active">Dashboard</a></li>
+            <li><span class="nav-role-badge employer">Employer</span></li>
+        </th:block>
+        <th:block sec:authorize="hasRole('ADMIN')">
+            <li><a th:href="@{/admin}" class="nav-link">Admin Panel</a></li>
+            <li><span class="nav-role-badge admin">Admin</span></li>
+        </th:block>
+        <li>
+            <form th:action="@{/logout}" method="post" style="display:inline;">
+                <button type="submit" class="btn btn-secondary btn-sm">Logout</button>
+            </form>
+        </li>
+    </ul>
+</nav>
+
+<div class="page-content">
+
+    <!-- Flash messages -->
+    <div class="alert alert-success fade-in" th:if="${successMsg != null}">✅ <span th:text="${successMsg}"></span></div>
+    <div class="alert alert-error fade-in"   th:if="${errorMsg != null}">❌ <span th:text="${errorMsg}"></span></div>
+
+    <!-- Welcome header -->
+    <div class="page-header fade-in">
+        <div>
+            <h1 class="page-title">
+                Welcome back, <span th:text="${user.name}">User</span>! 👋
+            </h1>
+            <p class="text-secondary" style="margin-top:4px;" th:text="${user.email}">user@email.com</p>
+        </div>
+        <th:block sec:authorize="hasRole('SEEKER')">
+            <a th:href="@{/jobs/recommendations}" class="btn btn-primary">🎯 View Matched Jobs</a>
+        </th:block>
+        <th:block sec:authorize="hasRole('EMPLOYER')">
+            <a th:href="@{/jobs/post}" class="btn btn-primary">+ Post New Job</a>
+        </th:block>
+    </div>
+
+    <!-- ======== SEEKER DASHBOARD ======== -->
+    <th:block sec:authorize="hasRole('SEEKER')">
+        <!-- Quick stats -->
+        <div class="stats-grid fade-in" style="margin-bottom:32px;">
+            <div class="stat-card">
+                <div class="stat-value" th:text="${applications != null ? #lists.size(applications) : 0}">0</div>
+                <div class="stat-label">Total Applications</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" th:with="cnt=${0}"
+                     th:text="${applications != null ? #lists.size(applications.?[status == 'PENDING']) : 0}">0</div>
+                <div class="stat-label">Pending</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value"
+                     th:text="${applications != null ? #lists.size(applications.?[status == 'HIRED']) : 0}">0</div>
+                <div class="stat-label">Hired ✨</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" th:text="${user.skills != null ? #sets.size(user.skills) : 0}">0</div>
+                <div class="stat-label">Skills Listed</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" th:text="${recommendations != null ? #lists.size(recommendations) : 0}">0</div>
+                <div class="stat-label">Job Matches</div>
+            </div>
+        </div>
+
+        <!-- My Applications -->
+        <div class="card fade-in fade-in-delay-1" style="margin-bottom:24px;">
+            <div class="flex justify-between items-center mb-16">
+                <h2 class="card-title">📋 My Applications</h2>
+                <a th:href="@{/jobs}" class="btn btn-secondary btn-sm">Find More Jobs</a>
+            </div>
+
+            <div th:if="${applications == null or #lists.isEmpty(applications)}"
+                 style="text-align:center; padding:40px; color:var(--text-muted);">
+                <div style="font-size:2.5rem; margin-bottom:12px;">📂</div>
+                <p>No applications yet. <a th:href="@{/jobs}" style="color:var(--accent-blue);">Browse open jobs</a>!</p>
+            </div>
+
+            <div th:if="${applications != null and !#lists.isEmpty(applications)}">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Job Title</th>
+                            <th>Company</th>
+                            <th>Location</th>
+                            <th>Applied On</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="app : ${applications}">
+                            <td style="font-weight:500; color:var(--text-primary);" th:text="${app.jobTitle}">Job</td>
+                            <td th:text="${app.companyName}">Company</td>
+                            <td th:text="${app.jobLocation}">Location</td>
+                            <td th:text="${app.formattedDate}">Date</td>
+                            <td>
+                                <span th:class="'badge ' + ${app.statusClass}" th:text="${app.status}">PENDING</span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Skill snapshot -->
+        <div class="card fade-in fade-in-delay-2">
+            <div class="flex justify-between items-center mb-16">
+                <h2 class="card-title">🛠 My Skills</h2>
+                <a th:href="@{/profile}" class="btn btn-secondary btn-sm">Manage Skills</a>
+            </div>
+            <div class="skill-chips"
+                 th:if="${user.skills != null and !#sets.isEmpty(user.skills)}">
+                <span class="chip chip-blue" th:each="skill : ${user.skills}" th:text="${skill.skillName}">Skill</span>
+            </div>
+            <div th:if="${user.skills == null or #sets.isEmpty(user.skills)}"
+                 style="color:var(--text-muted); font-size:0.875rem;">
+                No skills added yet.
+                <a th:href="@{/profile}" style="color:var(--accent-blue);">Add your skills</a> to get job recommendations!
+            </div>
+        </div>
+    </th:block>
+
+    <!-- ======== EMPLOYER DASHBOARD ======== -->
+    <th:block sec:authorize="hasRole('EMPLOYER')">
+        <div th:if="${employer != null}">
+            <!-- Company info -->
+            <div class="card fade-in" style="margin-bottom:24px; background: var(--gradient-card);">
+                <div class="flex items-center gap-16">
+                    <div style="width:56px; height:56px; border-radius:14px; background:rgba(245,158,11,0.15);
+                                display:flex; align-items:center; justify-content:center; font-size:1.75rem;">🏢</div>
+                    <div>
+                        <div style="font-size:1.25rem; font-weight:700;" th:text="${employer.companyName}">Company</div>
+                        <div style="color:var(--text-muted); font-size:0.875rem;" th:text="${employer.industry}">Industry</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Job stats -->
+            <div class="stats-grid fade-in fade-in-delay-1" style="margin-bottom:32px;">
+                <div class="stat-card">
+                    <div class="stat-value" th:text="${postedJobs != null ? #lists.size(postedJobs) : 0}">0</div>
+                    <div class="stat-label">Jobs Posted</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" th:text="${postedJobs != null ? #lists.size(postedJobs.?[status == 'OPEN']) : 0}">0</div>
+                    <div class="stat-label">Open</div>
+                </div>
+            </div>
+
+            <!-- Posted jobs table -->
+            <div class="card fade-in fade-in-delay-2">
+                <div class="flex justify-between items-center mb-16">
+                    <h2 class="card-title">📌 My Job Postings</h2>
+                    <a th:href="@{/jobs/post}" class="btn btn-primary btn-sm">+ Post New</a>
+                </div>
+
+                <div th:if="${postedJobs == null or #lists.isEmpty(postedJobs)}"
+                     style="text-align:center; padding:40px; color:var(--text-muted);">
+                    <div style="font-size:2.5rem; margin-bottom:12px;">📋</div>
+                    <p>No jobs posted yet. <a th:href="@{/jobs/post}" style="color:var(--accent-blue);">Post your first job</a>!</p>
+                </div>
+
+                <table class="table" th:if="${postedJobs != null and !#lists.isEmpty(postedJobs)}">
+                    <thead>
+                        <tr><th>Title</th><th>Location</th><th>Skills Required</th><th>Status</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="job : ${postedJobs}">
+                            <td style="font-weight:500; color:var(--text-primary);" th:text="${job.title}">Title</td>
+                            <td th:text="${job.location}">Location</td>
+                            <td>
+                                <div class="skill-chips">
+                                    <span class="chip chip-blue" th:each="skill : ${job.requiredSkills}" th:text="${skill.skillName}">Skill</span>
+                                </div>
+                            </td>
+                            <td>
+                                <span th:class="${job.status == 'OPEN' ? 'badge badge-hired' : 'badge badge-rejected'}"
+                                      th:text="${job.status}">OPEN</span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </th:block>
+
+    <!-- ======== ADMIN DASHBOARD ======== -->
+    <th:block sec:authorize="hasRole('ADMIN')">
+        <div class="stats-grid fade-in">
+            <div class="stat-card">
+                <div class="stat-value" th:text="${stats['totalSeekers']}">0</div>
+                <div class="stat-label">Job Seekers</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" th:text="${stats['totalEmployers']}">0</div>
+                <div class="stat-label">Employers</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" th:text="${stats['openJobs']}">0</div>
+                <div class="stat-label">Open Jobs</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" th:text="${stats['totalApps']}">0</div>
+                <div class="stat-label">Applications</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value text-gradient" th:text="${stats['placementRate'] + '%'}">0%</div>
+                <div class="stat-label">SDG Placement Rate</div>
+            </div>
+        </div>
+        <div class="card fade-in fade-in-delay-1 mt-24">
+            <p style="color:var(--text-secondary);">
+                For full admin controls, go to the
+                <a th:href="@{/admin}" style="color:var(--accent-blue);">Admin Panel →</a>
+            </p>
+        </div>
+    </th:block>
+
+</div>
+</body>
+</html>

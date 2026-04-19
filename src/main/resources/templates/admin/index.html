@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel — SkillConnect</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+
+<nav class="navbar">
+    <a th:href="@{/}" class="navbar-brand"><span class="logo-icon">⚡</span> SkillConnect</a>
+    <ul class="navbar-nav">
+        <li><a th:href="@{/jobs}" class="nav-link">Browse Jobs</a></li>
+        <li><a th:href="@{/admin}" class="nav-link active">Admin Panel</a></li>
+        <li><span class="nav-role-badge admin">Admin</span></li>
+        <li>
+            <form th:action="@{/logout}" method="post" style="display:inline;">
+                <button type="submit" class="btn btn-secondary btn-sm">Logout</button>
+            </form>
+        </li>
+    </ul>
+</nav>
+
+<div class="page-content">
+
+    <div class="page-header fade-in">
+        <h1 class="page-title">🛡 <span>Admin</span> Panel</h1>
+        <form th:action="@{/admin/trigger-alerts}" method="post">
+            <button type="submit" id="triggerAlertsBtn" class="btn btn-secondary btn-sm">
+                📣 Trigger Job Alerts (Demo)
+            </button>
+        </form>
+    </div>
+
+    <!-- Flash -->
+    <div class="alert alert-success fade-in" th:if="${successMsg != null}">✅ <span th:text="${successMsg}"></span></div>
+
+    <!-- ===== STATS ===== -->
+    <div class="stats-grid fade-in" style="margin-bottom:32px;">
+        <div class="stat-card">
+            <div class="stat-value" th:text="${stats['totalSeekers']}">0</div>
+            <div class="stat-label">Job Seekers</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" th:text="${stats['totalEmployers']}">0</div>
+            <div class="stat-label">Employers</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" th:text="${stats['openJobs']}">0</div>
+            <div class="stat-label">Open Jobs</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" th:text="${stats['totalApps']}">0</div>
+            <div class="stat-label">Applications</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" th:text="${stats['hiredCount']}">0</div>
+            <div class="stat-label">Hired</div>
+        </div>
+        <!-- SDG KPI -->
+        <div class="stat-card" style="border-color:rgba(16,185,129,0.3); background:rgba(16,185,129,0.05);">
+            <div class="stat-value" th:text="${stats['placementRate'] + '%'}">0%</div>
+            <div class="stat-label">🌍 SDG Placement Rate</div>
+        </div>
+    </div>
+
+    <!-- SDG info box -->
+    <div class="card fade-in" style="margin-bottom:28px; background:rgba(16,185,129,0.04); border-color:rgba(16,185,129,0.2);">
+        <div style="font-size:0.875rem; color:var(--text-secondary);">
+            <strong style="color:var(--accent-emerald);">🌍 SDG KPI:</strong>
+            <strong>Placement Rate = (HIRED users / total seekers) × 100</strong> — computed via raw JDBC PreparedStatement.
+            This metric tracks SDG 8 (Decent Work &amp; Economic Growth) progress for this platform.
+            <br><small style="color:var(--text-muted);">SQL: SELECT COUNT(*) FROM applications WHERE status='HIRED' / SELECT COUNT(*) FROM users WHERE role='SEEKER'</small>
+        </div>
+    </div>
+
+    <!-- ===== APPLICATIONS TABLE ===== -->
+    <div class="card fade-in fade-in-delay-1" style="margin-bottom:24px;">
+        <h2 class="card-title" style="margin-bottom:16px;">📋 All Applications</h2>
+        <div style="overflow-x:auto;">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Seeker</th>
+                        <th>Job</th>
+                        <th>Company</th>
+                        <th>Applied</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="app : ${applications}">
+                        <td th:text="${app.appId}">1</td>
+                        <td style="color:var(--text-primary);" th:text="${app.user?.name}">User</td>
+                        <td th:text="${app.job?.title}">Job</td>
+                        <td th:text="${app.job?.employer?.companyName ?: '—'}">Company</td>
+                        <td th:text="${app.appliedAt != null ? #temporals.format(app.appliedAt, 'dd MMM') : '—'}">Date</td>
+                        <td>
+                            <span th:class="'badge ' + ${app.status == 'HIRED' ? 'badge-hired' : app.status == 'REVIEWED' ? 'badge-reviewed' : app.status == 'REJECTED' ? 'badge-rejected' : 'badge-pending'}"
+                                  th:text="${app.status}">PENDING</span>
+                        </td>
+                        <td>
+                            <form th:action="@{/admin/applications/{id}/status(id=${app.appId})}" method="post" style="display:flex; gap:4px;">
+                                <select name="status" class="form-control" style="padding:4px 8px; font-size:0.75rem; width:auto;">
+                                    <option value="PENDING"  th:selected="${app.status == 'PENDING'}">Pending</option>
+                                    <option value="REVIEWED" th:selected="${app.status == 'REVIEWED'}">Reviewed</option>
+                                    <option value="HIRED"    th:selected="${app.status == 'HIRED'}">Hired</option>
+                                    <option value="REJECTED" th:selected="${app.status == 'REJECTED'}">Rejected</option>
+                                </select>
+                                <button type="submit" class="btn btn-primary btn-sm">Save</button>
+                            </form>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ===== JOBS TABLE ===== -->
+    <div class="card fade-in fade-in-delay-2" style="margin-bottom:24px;">
+        <h2 class="card-title" style="margin-bottom:16px;">💼 All Jobs</h2>
+        <div style="overflow-x:auto;">
+            <table class="table">
+                <thead>
+                    <tr><th>#</th><th>Title</th><th>Employer</th><th>Location</th><th>Status</th><th>Action</th></tr>
+                </thead>
+                <tbody>
+                    <tr th:each="job : ${jobs}">
+                        <td th:text="${job.jobId}">1</td>
+                        <td style="color:var(--text-primary); font-weight:500;" th:text="${job.title}">Title</td>
+                        <td th:text="${job.employer?.companyName ?: '—'}">Company</td>
+                        <td th:text="${job.location}">Location</td>
+                        <td>
+                            <span th:class="${job.status == 'OPEN' ? 'badge badge-hired' : 'badge badge-rejected'}"
+                                  th:text="${job.status}">OPEN</span>
+                        </td>
+                        <td>
+                            <form th:action="@{/admin/jobs/{id}/close(id=${job.jobId})}" method="post"
+                                  th:if="${job.status == 'OPEN'}">
+                                <button type="submit" class="btn btn-danger btn-sm">Close</button>
+                            </form>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ===== USERS TABLE ===== -->
+    <div class="card fade-in fade-in-delay-3">
+        <h2 class="card-title" style="margin-bottom:16px;">👥 All Users</h2>
+        <div style="overflow-x:auto;">
+            <table class="table">
+                <thead>
+                    <tr><th>#</th><th>Name</th><th>Email</th><th>Role</th><th>Location</th><th>Action</th></tr>
+                </thead>
+                <tbody>
+                    <tr th:each="u : ${users}">
+                        <td th:text="${u.userId}">1</td>
+                        <td style="color:var(--text-primary); font-weight:500;" th:text="${u.name}">Name</td>
+                        <td th:text="${u.email}">Email</td>
+                        <td>
+                            <span th:class="${u.role.name() == 'SEEKER' ? 'nav-role-badge seeker' : u.role.name() == 'EMPLOYER' ? 'nav-role-badge employer' : 'nav-role-badge admin'}"
+                                  th:text="${u.role}">ROLE</span>
+                        </td>
+                        <td th:text="${u.location ?: '—'}">Location</td>
+                        <td>
+                            <form th:action="@{/admin/users/{id}/delete(id=${u.userId})}" method="post"
+                                  th:if="${u.role.name() != 'ADMIN'}"
+                                  onsubmit="return confirm('Delete this user?')">
+                                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+</body>
+</html>

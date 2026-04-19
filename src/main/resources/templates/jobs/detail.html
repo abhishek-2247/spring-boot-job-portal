@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Job Details — SkillConnect</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<nav class="navbar">
+    <a th:href="@{/}" class="navbar-brand"><span class="logo-icon">⚡</span> SkillConnect</a>
+    <ul class="navbar-nav">
+        <li><a th:href="@{/jobs}" class="nav-link active">Browse Jobs</a></li>
+        <th:block sec:authorize="isAnonymous()">
+            <li><a th:href="@{/login}"    class="nav-link">Login</a></li>
+            <li><a th:href="@{/register}" class="btn btn-primary btn-sm">Get Started</a></li>
+        </th:block>
+        <th:block sec:authorize="hasRole('SEEKER')">
+            <li><a th:href="@{/jobs/recommendations}" class="nav-link"><span class="nav-badge">AI</span> Matches</a></li>
+            <li><a th:href="@{/profile}" class="nav-link">My Skills</a></li>
+            <li><a th:href="@{/dashboard}" class="nav-link">Dashboard</a></li>
+            <li><span class="nav-role-badge seeker">Seeker</span></li>
+        </th:block>
+        <th:block sec:authorize="hasRole('EMPLOYER')">
+            <li><a th:href="@{/jobs/post}" class="nav-link">Post Job</a></li>
+            <li><a th:href="@{/dashboard}" class="nav-link">Dashboard</a></li>
+            <li><span class="nav-role-badge employer">Employer</span></li>
+        </th:block>
+        <th:block sec:authorize="isAuthenticated()">
+            <li>
+                <form th:action="@{/logout}" method="post" style="display:inline;">
+                    <button type="submit" class="btn btn-secondary btn-sm">Logout</button>
+                </form>
+            </li>
+        </th:block>
+    </ul>
+</nav>
+
+<div class="page-content" style="max-width:800px;">
+
+    <!-- Flash messages -->
+    <div class="alert alert-success fade-in" th:if="${successMsg != null}">✅ <span th:text="${successMsg}"></span></div>
+    <div class="alert alert-error fade-in"   th:if="${errorMsg != null}">❌ <span th:text="${errorMsg}"></span></div>
+
+    <div style="margin-bottom:16px;">
+        <a th:href="@{/jobs}" style="color:var(--text-muted); text-decoration:none; font-size:0.875rem;">← Back to Jobs</a>
+    </div>
+
+    <div class="card fade-in" th:if="${job != null}">
+        <!-- Header -->
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap; margin-bottom:24px;">
+            <div>
+                <h1 style="font-size:1.75rem; font-weight:700; margin-bottom:8px;" th:text="${job.title}">Job Title</h1>
+                <div style="font-size:1rem; color:var(--accent-blue); font-weight:500; margin-bottom:8px;"
+                     th:text="${job.employer?.companyName ?: '—'}">Company</div>
+                <div class="job-meta">
+                    <span>📍 <span th:text="${job.location ?: 'Remote'}">Location</span></span>
+                    <span th:if="${job.salaryRange != null}">💰 <span th:text="${job.salaryRange}">Salary</span></span>
+                    <span>📊 <span th:class="'badge ' + ${job.status == 'OPEN' ? 'badge-hired' : 'badge-rejected'}"
+                                   th:text="${job.status}">OPEN</span></span>
+                </div>
+            </div>
+            <!-- Apply button -->
+            <th:block sec:authorize="hasRole('SEEKER')">
+                <form th:action="@{/jobs/apply/{id}(id=${job.jobId})}" method="post">
+                    <button type="submit" class="btn btn-primary btn-lg"
+                            th:disabled="${job.status != 'OPEN'}">
+                        Apply Now →
+                    </button>
+                </form>
+            </th:block>
+            <th:block sec:authorize="isAnonymous()">
+                <a th:href="@{/login}" class="btn btn-primary btn-lg">Login to Apply</a>
+            </th:block>
+        </div>
+
+        <hr style="border:none; border-top: 1px solid var(--border-color); margin:24px 0;">
+
+        <!-- Description -->
+        <div style="margin-bottom:24px;">
+            <h2 style="font-size:1rem; font-weight:600; margin-bottom:12px; color:var(--text-secondary);">Job Description</h2>
+            <p style="color:var(--text-secondary); line-height:1.8; white-space:pre-line;" th:text="${job.description}">...</p>
+        </div>
+
+        <!-- Required skills -->
+        <div th:if="${job.requiredSkills != null and !#sets.isEmpty(job.requiredSkills)}">
+            <h2 style="font-size:1rem; font-weight:600; margin-bottom:12px; color:var(--text-secondary);">Required Skills</h2>
+            <div class="skill-chips">
+                <span class="chip chip-blue" th:each="skill : ${job.requiredSkills}" th:text="${skill.skillName}">Skill</span>
+            </div>
+        </div>
+
+        <hr style="border:none; border-top: 1px solid var(--border-color); margin:24px 0;" th:if="${job.employer != null and job.employer.website != null}">
+
+        <!-- Company info -->
+        <div th:if="${job.employer != null}">
+            <h2 style="font-size:1rem; font-weight:600; margin-bottom:12px; color:var(--text-secondary);">About the Company</h2>
+            <div style="display:flex; gap:12px; align-items:center;">
+                <div style="width:48px; height:48px; border-radius:12px; background:rgba(245,158,11,0.15);
+                            display:flex; align-items:center; justify-content:center; font-size:1.25rem;">🏢</div>
+                <div>
+                    <div style="font-weight:600;" th:text="${job.employer.companyName}">Company</div>
+                    <div style="font-size:0.825rem; color:var(--text-muted);" th:text="${job.employer.industry}">Industry</div>
+                    <a th:if="${job.employer.website != null}"
+                       th:href="${job.employer.website}"
+                       style="font-size:0.8rem; color:var(--accent-blue);"
+                       target="_blank" th:text="${job.employer.website}">Website</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile — SkillConnect</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+
+<nav class="navbar">
+    <a th:href="@{/}" class="navbar-brand"><span class="logo-icon">⚡</span> SkillConnect</a>
+    <ul class="navbar-nav">
+        <li><a th:href="@{/jobs}" class="nav-link">Browse Jobs</a></li>
+        <li><a th:href="@{/jobs/recommendations}" class="nav-link"><span class="nav-badge">AI</span> Matches</a></li>
+        <li><a th:href="@{/profile}" class="nav-link active">My Skills</a></li>
+        <li><a th:href="@{/dashboard}" class="nav-link">Dashboard</a></li>
+        <li><span class="nav-role-badge seeker">Seeker</span></li>
+        <li>
+            <form th:action="@{/logout}" method="post" style="display:inline;">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                <button type="submit" class="btn btn-secondary btn-sm">Logout</button>
+            </form>
+        </li>
+    </ul>
+</nav>
+
+<div class="page-content">
+
+    <div class="page-header fade-in">
+        <h1 class="page-title">👤 My <span>Profile</span></h1>
+        <a th:href="@{/jobs/recommendations}" class="btn btn-primary">🎯 View My Matches</a>
+    </div>
+
+    <!-- Flash messages -->
+    <div class="alert alert-success fade-in" th:if="${successMsg != null}">✅ <span th:text="${successMsg}"></span></div>
+    <div class="alert alert-error fade-in"   th:if="${errorMsg != null}">❌ <span th:text="${errorMsg}"></span></div>
+
+    <!-- Profile header card -->
+    <div class="card fade-in" style="margin-bottom:24px; display:flex; gap:20px; align-items:center;">
+        <div style="width:72px; height:72px; border-radius:50%; background:var(--gradient-btn);
+                    display:flex; align-items:center; justify-content:center;
+                    font-size:1.75rem; font-weight:700; color:white; flex-shrink:0;">
+            <span th:text="${#strings.substring(user.name, 0, 1)}">A</span>
+        </div>
+        <div>
+            <div style="font-size:1.4rem; font-weight:700;" th:text="${user.name}">Name</div>
+            <div style="color:var(--text-muted); font-size:0.875rem;" th:text="${user.email}">email</div>
+            <div style="color:var(--text-muted); font-size:0.875rem; margin-top:2px;" th:if="${user.location != null}">
+                📍 <span th:text="${user.location}">Location</span>
+            </div>
+        </div>
+        <div style="margin-left:auto; text-align:right;">
+            <div class="stat-value" th:text="${#sets.size(user.skills)}">0</div>
+            <div class="stat-label">Skills</div>
+        </div>
+    </div>
+
+    <!-- Skill editor -->
+    <div class="card fade-in fade-in-delay-1">
+        <h2 class="card-title" style="margin-bottom:4px;">🛠 Skill Tags</h2>
+        <p class="card-subtitle">Select all skills you are proficient in. This powers the job matching algorithm.</p>
+
+        <form id="skillsForm" th:action="@{/profile/skills}" method="post">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+
+            <!-- Skills grouped by category -->
+            <div th:each="category : ${ {'Backend', 'Frontend', 'Database', 'DevOps', 'Cloud', 'AI/ML'} }">
+                <div style="margin-bottom:20px;">
+                    <p style="font-size:0.75rem; font-weight:600; text-transform:uppercase; letter-spacing:0.08em;
+                               color:var(--text-muted); margin-bottom:10px;" th:text="${category}">Category</p>
+                    <div class="skill-chips">
+                        <th:block th:each="skill : ${allSkills}" th:if="${skill.category == category}">
+                            <label class="skill-toggle-chip chip"
+                                   th:classappend="${userSkillIds != null and userSkillIds.contains(skill.skillId)} ? ' chip-blue' : ' chip-purple'"
+                                   th:id="'label-' + ${skill.skillId}"
+                                   style="cursor:pointer;">
+                                <input type="checkbox" name="skillIds"
+                                       th:value="${skill.skillId}"
+                                       th:checked="${userSkillIds != null and userSkillIds.contains(skill.skillId)}"
+                                       style="display:none;"
+                                       th:id="'cb-' + ${skill.skillId}">
+                                <span th:text="${skill.skillName}">Skill</span>
+                            </label>
+                        </th:block>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display:flex; gap:12px; align-items:center; margin-top:16px;">
+                <button type="submit" id="saveSkillsBtn" class="btn btn-primary">
+                    💾 Save Skills
+                </button>
+                <span id="selectedCountDisplay" style="font-size:0.8rem; color:var(--text-muted);">
+                    Select skills above
+                </span>
+            </div>
+        </form>
+    </div>
+
+    <!-- Tip card -->
+    <div class="card fade-in fade-in-delay-2" style="margin-top:16px; background:rgba(16,185,129,0.04); border-color:rgba(16,185,129,0.2);">
+        <div style="font-size:0.875rem; color:var(--text-secondary);">
+            <strong style="color:var(--accent-emerald);">💡 Pro Tip:</strong>
+            The more skills you add, the better the matching algorithm works.
+            Skills are scored using intersection percentage — jobs requiring skills you have get higher scores.
+            <a th:href="@{/jobs/recommendations}" style="color:var(--accent-emerald);">View your current matches →</a>
+        </div>
+    </div>
+
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const chips = document.querySelectorAll('.skill-toggle-chip');
+    const countEl = document.getElementById('selectedCountDisplay');
+
+    function updateCount() {
+        const count = document.querySelectorAll('input[name="skillIds"]:checked').length;
+        countEl.textContent = count + ' skill' + (count !== 1 ? 's' : '') + ' selected';
+    }
+
+    chips.forEach(chip => {
+        const checkbox = chip.querySelector('input[type="checkbox"]');
+        chip.addEventListener('click', function(e) {
+            e.preventDefault();
+            checkbox.checked = !checkbox.checked;
+            if (checkbox.checked) {
+                chip.classList.remove('chip-purple');
+                chip.classList.add('chip-blue');
+            } else {
+                chip.classList.remove('chip-blue');
+                chip.classList.add('chip-purple');
+            }
+            updateCount();
+        });
+    });
+
+    updateCount();
+});
+</script>
+</body>
+</html>

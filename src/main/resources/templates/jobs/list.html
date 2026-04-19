@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Browse Jobs — SkillConnect</title>
+    <meta name="description" content="Browse open jobs on SkillConnect and find your next opportunity.">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+
+<nav class="navbar">
+    <a th:href="@{/}" class="navbar-brand"><span class="logo-icon">⚡</span> SkillConnect</a>
+    <ul class="navbar-nav">
+        <li><a th:href="@{/jobs}" class="nav-link active">Browse Jobs</a></li>
+        <th:block sec:authorize="isAnonymous()">
+            <li><a th:href="@{/login}"    class="nav-link">Login</a></li>
+            <li><a th:href="@{/register}" class="btn btn-primary btn-sm">Get Started</a></li>
+        </th:block>
+        <th:block sec:authorize="hasRole('SEEKER')">
+            <li><a th:href="@{/jobs/recommendations}" class="nav-link"><span class="nav-badge">AI</span> Matched Jobs</a></li>
+            <li><a th:href="@{/profile}" class="nav-link">My Skills</a></li>
+            <li><a th:href="@{/dashboard}" class="nav-link">Dashboard</a></li>
+            <li><span class="nav-role-badge seeker">Seeker</span></li>
+        </th:block>
+        <th:block sec:authorize="hasRole('EMPLOYER')">
+            <li><a th:href="@{/jobs/post}" class="nav-link">Post Job</a></li>
+            <li><a th:href="@{/dashboard}" class="nav-link">Dashboard</a></li>
+            <li><span class="nav-role-badge employer">Employer</span></li>
+        </th:block>
+        <th:block sec:authorize="hasRole('ADMIN')">
+            <li><a th:href="@{/admin}" class="nav-link">Admin</a></li>
+            <li><span class="nav-role-badge admin">Admin</span></li>
+        </th:block>
+        <th:block sec:authorize="isAuthenticated()">
+            <li>
+                <form th:action="@{/logout}" method="post" style="display:inline;">
+                    <button type="submit" class="btn btn-secondary btn-sm">Logout</button>
+                </form>
+            </li>
+        </th:block>
+    </ul>
+</nav>
+
+<!-- Hero -->
+<div class="hero">
+    <h1 class="hero-title">Find Your Perfect Job Match</h1>
+    <p class="hero-subtitle">Browse skill-tagged opportunities and let our algorithm surface the best fits for you.</p>
+    <th:block sec:authorize="isAnonymous()">
+        <a th:href="@{/register}" class="btn btn-primary btn-lg">Start Matching Free →</a>
+    </th:block>
+    <th:block sec:authorize="hasRole('SEEKER')">
+        <a th:href="@{/jobs/recommendations}" class="btn btn-primary btn-lg">🎯 View My Matches</a>
+    </th:block>
+</div>
+
+<div class="page-content" style="padding-top:0;">
+
+    <!-- Flash messages -->
+    <div class="alert alert-success" th:if="${successMsg != null}">✅ <span th:text="${successMsg}"></span></div>
+    <div class="alert alert-error"   th:if="${errorMsg != null}">❌ <span th:text="${errorMsg}"></span></div>
+
+    <!-- Filter bar -->
+    <form th:action="@{/jobs}" method="get" class="filter-bar fade-in">
+        <input type="text" name="location" class="form-control" style="flex:1; min-width:180px;"
+               placeholder="🔍 Filter by location..."
+               th:value="${location}">
+        <button type="submit" class="btn btn-primary">Search</button>
+        <a th:href="@{/jobs}" class="btn btn-secondary">Clear</a>
+    </form>
+
+    <!-- Job count -->
+    <div class="flex justify-between items-center mb-24 fade-in">
+        <p class="text-secondary">
+            <strong style="color:var(--text-primary);" th:text="${#lists.size(jobs)}">0</strong> open positions found
+        </p>
+        <th:block sec:authorize="hasRole('SEEKER')">
+            <a th:href="@{/jobs/recommendations}" class="btn btn-secondary btn-sm">🎯 Show Skill Matches</a>
+        </th:block>
+    </div>
+
+    <!-- Jobs grid -->
+    <div class="jobs-grid" th:if="${jobs != null and !#lists.isEmpty(jobs)}">
+        <div class="job-card fade-in" th:each="job, stat : ${jobs}"
+             th:style="'animation-delay: ' + (${stat.index} * 0.05) + 's'">
+
+            <!-- Top bar -->
+            <div class="flex justify-between items-center">
+                <span class="job-company" th:text="${job.employer?.companyName ?: 'Company'}">Company</span>
+                <span class="badge badge-hired" th:text="${job.status}">OPEN</span>
+            </div>
+
+            <!-- Title -->
+            <div class="job-title" th:text="${job.title}">Job Title</div>
+
+            <!-- Meta -->
+            <div class="job-meta">
+                <span>📍 <span th:text="${job.location ?: 'Remote'}">Location</span></span>
+                <span th:if="${job.salaryRange != null}">💰 <span th:text="${job.salaryRange}">Salary</span></span>
+            </div>
+
+            <!-- Skills -->
+            <div class="skill-chips" th:if="${job.requiredSkills != null and !#sets.isEmpty(job.requiredSkills)}">
+                <span class="chip chip-blue" th:each="skill : ${job.requiredSkills}" th:text="${skill.skillName}">Skill</span>
+            </div>
+
+            <!-- Description snippet -->
+            <p style="font-size:0.825rem; color:var(--text-muted); line-height:1.5;"
+               th:text="${job.description != null ? #strings.abbreviate(job.description, 100) : ''}">...</p>
+
+            <!-- Actions -->
+            <div class="flex gap-8 mt-16" style="margin-top:auto;">
+                <a th:href="@{/jobs/{id}(id=${job.jobId})}" class="btn btn-secondary btn-sm" style="flex:1; justify-content:center;">
+                    View Details
+                </a>
+                <th:block sec:authorize="hasRole('SEEKER')">
+                    <form th:action="@{/jobs/apply/{id}(id=${job.jobId})}" method="post" style="flex:1;">
+                        <button type="submit" class="btn btn-primary btn-sm w-full"
+                                th:if="${appliedIds == null or !appliedIds.contains(job.jobId)}">Apply →</button>
+                        <button type="button" class="btn btn-secondary btn-sm w-full" disabled
+                                th:if="${appliedIds != null and appliedIds.contains(job.jobId)}"
+                                style="opacity:0.6; cursor:not-allowed;">Applied ✓</button>
+                    </form>
+                </th:block>
+                <th:block sec:authorize="isAnonymous()">
+                    <a th:href="@{/login}" class="btn btn-primary btn-sm" style="flex:1; text-align:center;">Login to Apply</a>
+                </th:block>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Empty state -->
+    <div th:if="${jobs == null or #lists.isEmpty(jobs)}"
+         style="text-align:center; padding:80px 24px; color:var(--text-muted);">
+        <div style="font-size:3rem; margin-bottom:16px;">🔍</div>
+        <h2 style="font-size:1.25rem; margin-bottom:8px; color:var(--text-secondary);">No jobs found</h2>
+        <p>Try adjusting your search filters.</p>
+    </div>
+
+</div>
+</body>
+</html>

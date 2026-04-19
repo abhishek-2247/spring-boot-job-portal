@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${pageTitle != null ? pageTitle + ' — SkillConnect' : 'SkillConnect Portal'}">SkillConnect</title>
+    <meta name="description" th:content="${pageDesc != null ? pageDesc : 'Skill Development and Job Connect Portal — Find jobs matched to your skills'}">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+
+<!-- ===== NAVBAR ===== -->
+<nav class="navbar">
+    <a th:href="@{/}" class="navbar-brand">
+        <span class="logo-icon">⚡</span>
+        SkillConnect
+    </a>
+
+    <ul class="navbar-nav">
+        <li><a th:href="@{/jobs}" class="nav-link">Browse Jobs</a></li>
+
+        <!-- If NOT logged in -->
+        <th:block sec:authorize="isAnonymous()">
+            <li><a th:href="@{/login}"    class="nav-link">Login</a></li>
+            <li><a th:href="@{/register}" class="btn btn-primary btn-sm">Get Started</a></li>
+        </th:block>
+
+        <!-- If logged in as SEEKER -->
+        <th:block sec:authorize="hasRole('SEEKER')">
+            <li><a th:href="@{/jobs/recommendations}" class="nav-link">
+                <span class="nav-badge">AI</span> Matched Jobs
+            </a></li>
+            <li><a th:href="@{/profile}" class="nav-link">My Skills</a></li>
+            <li><a th:href="@{/dashboard}" class="nav-link">Dashboard</a></li>
+            <li><span class="nav-role-badge seeker">Seeker</span></li>
+        </th:block>
+
+        <!-- If logged in as EMPLOYER -->
+        <th:block sec:authorize="hasRole('EMPLOYER')">
+            <li><a th:href="@{/jobs/post}" class="nav-link">Post Job</a></li>
+            <li><a th:href="@{/dashboard}" class="nav-link">Dashboard</a></li>
+            <li><span class="nav-role-badge employer">Employer</span></li>
+        </th:block>
+
+        <!-- If logged in as ADMIN -->
+        <th:block sec:authorize="hasRole('ADMIN')">
+            <li><a th:href="@{/admin}" class="nav-link">Admin Panel</a></li>
+            <li><span class="nav-role-badge admin">Admin</span></li>
+        </th:block>
+
+        <!-- Logout (any authenticated) -->
+        <th:block sec:authorize="isAuthenticated()">
+            <li>
+                <form th:action="@{/logout}" method="post" style="display:inline;">
+                    <button type="submit" class="btn btn-secondary btn-sm">Logout</button>
+                </form>
+            </li>
+        </th:block>
+    </ul>
+</nav>
+
+<!-- ===== FLASH MESSAGES ===== -->
+<div class="container" style="padding-top:16px;" th:if="${successMsg != null or errorMsg != null or infoMsg != null}">
+    <div class="alert alert-success" th:if="${successMsg != null}">
+        <span>✅</span> <span th:text="${successMsg}"></span>
+    </div>
+    <div class="alert alert-error" th:if="${errorMsg != null}">
+        <span>❌</span> <span th:text="${errorMsg}"></span>
+    </div>
+    <div class="alert alert-info" th:if="${infoMsg != null}">
+        <span>ℹ️</span> <span th:text="${infoMsg}"></span>
+    </div>
+</div>
+
+<!-- ===== PAGE CONTENT ===== -->
+<div th:replace="${content}"><!-- page-specific content --></div>
+
+<footer style="text-align:center; padding:32px; color: var(--text-muted); font-size:0.8rem; border-top: 1px solid var(--border-color); margin-top: 60px;">
+    <p>⚡ SkillConnect Portal &mdash; SDG 8 &amp; SDG 4 | EAD Mini Project | Spring Boot 3.2</p>
+</footer>
+
+<script>
+// Skill chip toggle interactivity
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.skill-toggle-chip').forEach(chip => {
+        chip.addEventListener('click', function () {
+            this.classList.toggle('chip-blue');
+            this.classList.toggle('selected');
+        });
+    });
+});
+</script>
+
+</body>
+</html>

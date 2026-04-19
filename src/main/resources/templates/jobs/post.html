@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Post a Job — SkillConnect</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+
+<nav class="navbar">
+    <a th:href="@{/}" class="navbar-brand"><span class="logo-icon">⚡</span> SkillConnect</a>
+    <ul class="navbar-nav">
+        <li><a th:href="@{/jobs}" class="nav-link">Browse Jobs</a></li>
+        <li><a th:href="@{/jobs/post}" class="nav-link active">Post Job</a></li>
+        <li><a th:href="@{/dashboard}" class="nav-link">Dashboard</a></li>
+        <li><span class="nav-role-badge employer">Employer</span></li>
+        <li>
+            <form th:action="@{/logout}" method="post" style="display:inline;">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                <button type="submit" class="btn btn-secondary btn-sm">Logout</button>
+            </form>
+        </li>
+    </ul>
+</nav>
+
+<div class="page-content">
+    <div class="page-header fade-in">
+        <h1 class="page-title">📋 Post a <span>New Job</span></h1>
+        <a th:href="@{/dashboard}" class="btn btn-secondary">← Back</a>
+    </div>
+
+    <!-- Flash messages -->
+    <div class="alert alert-success" th:if="${successMsg != null}">✅ <span th:text="${successMsg}"></span></div>
+    <div class="alert alert-error"   th:if="${errorMsg != null}">❌ <span th:text="${errorMsg}"></span></div>
+
+    <div class="card fade-in" style="max-width:700px; margin:0 auto;">
+        <form id="postJobForm" th:action="@{/jobs/post}" method="post" th:object="${job}">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+
+            <!-- Title -->
+            <div class="form-group">
+                <label class="form-label" for="jobTitle">Job Title *</label>
+                <input type="text" id="jobTitle" th:field="*{title}" class="form-control"
+                       placeholder="e.g. Full Stack Developer" required>
+            </div>
+
+            <!-- Description -->
+            <div class="form-group">
+                <label class="form-label" for="jobDesc">Job Description *</label>
+                <textarea id="jobDesc" th:field="*{description}" class="form-control"
+                          style="min-height:120px;"
+                          placeholder="Describe the role, responsibilities, and team..." required></textarea>
+            </div>
+
+            <!-- Location + Salary -->
+            <div class="grid-2">
+                <div class="form-group">
+                    <label class="form-label" for="jobLoc">Location *</label>
+                    <input type="text" id="jobLoc" th:field="*{location}" class="form-control"
+                           placeholder="Bangalore / Remote" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="jobSalary">Salary Range</label>
+                    <input type="text" id="jobSalary" th:field="*{salaryRange}" class="form-control"
+                           placeholder="e.g. ₹8L – ₹15L">
+                </div>
+            </div>
+
+            <!-- Skills required -->
+            <div class="form-group">
+                <label class="form-label">Required Skills *</label>
+                <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:12px;">
+                    Select all skills candidates need for this role (these power the matching algorithm)
+                </p>
+                <div class="skill-chips" id="skillsContainer">
+                    <th:block th:each="skill : ${allSkills}">
+                        <label class="skill-toggle-chip chip"
+                               th:id="'cl-' + ${skill.skillId}"
+                               style="cursor:pointer; user-select:none;">
+                            <input type="checkbox" name="skillIds"
+                                   th:value="${skill.skillId}"
+                                   style="display:none;"
+                                   th:id="'sk-' + ${skill.skillId}">
+                            <span th:text="${skill.skillName}">Skill</span>
+                        </label>
+                    </th:block>
+                </div>
+                <p id="selectedCount" style="font-size:0.78rem; color:var(--text-muted); margin-top:10px;">
+                    0 skills selected
+                </p>
+            </div>
+
+            <button type="submit" id="postJobBtn" class="btn btn-primary btn-full btn-lg" style="margin-top:8px;">
+                Publish Job Listing →
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>
+// Skill chip selection toggle
+document.addEventListener('DOMContentLoaded', function() {
+    const chips = document.querySelectorAll('.skill-toggle-chip');
+    const countEl = document.getElementById('selectedCount');
+
+    chips.forEach(chip => {
+        const checkbox = chip.querySelector('input[type="checkbox"]');
+        chip.addEventListener('click', function(e) {
+            e.preventDefault();
+            checkbox.checked = !checkbox.checked;
+            chip.classList.toggle('chip-blue', checkbox.checked);
+            chip.classList.toggle('chip-purple', !checkbox.checked);
+            const count = document.querySelectorAll('input[name="skillIds"]:checked').length;
+            countEl.textContent = count + ' skill' + (count !== 1 ? 's' : '') + ' selected';
+        });
+        // Start with blue style if initially checked
+        chip.classList.add('chip-purple');
+    });
+});
+</script>
+</body>
+</html>

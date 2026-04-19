@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skill Matched Jobs — SkillConnect</title>
+    <meta name="description" content="Jobs ranked by how well they match your skill profile.">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+
+<nav class="navbar">
+    <a th:href="@{/}" class="navbar-brand"><span class="logo-icon">⚡</span> SkillConnect</a>
+    <ul class="navbar-nav">
+        <li><a th:href="@{/jobs}" class="nav-link">Browse Jobs</a></li>
+        <li><a th:href="@{/jobs/recommendations}" class="nav-link active"><span class="nav-badge">AI</span> Matched Jobs</a></li>
+        <li><a th:href="@{/profile}" class="nav-link">My Skills</a></li>
+        <li><a th:href="@{/dashboard}" class="nav-link">Dashboard</a></li>
+        <li><span class="nav-role-badge seeker">Seeker</span></li>
+        <li>
+            <form th:action="@{/logout}" method="post" style="display:inline;">
+                <button type="submit" class="btn btn-secondary btn-sm">Logout</button>
+            </form>
+        </li>
+    </ul>
+</nav>
+
+<div class="page-content">
+
+    <!-- Header -->
+    <div class="page-header fade-in">
+        <div>
+            <h1 class="page-title">🎯 Your <span>Skill Matches</span></h1>
+            <p class="text-secondary" style="margin-top:4px;">Jobs ranked by how many of your skills they require</p>
+        </div>
+        <a th:href="@{/profile}" class="btn btn-secondary">✏️ Edit My Skills</a>
+    </div>
+
+    <!-- Algorithm explainer card -->
+    <div class="card fade-in" style="margin-bottom:28px; background:rgba(79,142,247,0.05); border-color:rgba(79,142,247,0.2);">
+        <div style="font-size:0.875rem; color:var(--text-secondary);">
+            <strong style="color:var(--accent-blue);">⚙️ Matching Algorithm:</strong>
+            Score = (skills you have ∩ skills job requires) / total skills job requires × 100%.
+            Only jobs with score &gt; 0% are shown, sorted highest-first.
+        </div>
+        <!-- User's skills -->
+        <div class="skill-chips" style="margin-top:12px;" th:if="${userSkills != null and !#sets.isEmpty(userSkills)}">
+            <span style="font-size:0.75rem; color:var(--text-muted); align-self:center;">Your skills:</span>
+            <span class="chip chip-green" th:each="skill : ${userSkills}" th:text="${skill.skillName}">Skill</span>
+        </div>
+    </div>
+
+    <!-- No skills warning -->
+    <div class="alert alert-info fade-in"
+         th:if="${userSkills == null or #sets.isEmpty(userSkills)}">
+        ℹ️ You have no skills listed yet!
+        <a th:href="@{/profile}" style="color:var(--accent-blue); font-weight:500;">Add skills to your profile</a> to see personalized matches.
+    </div>
+
+    <!-- No matches -->
+    <div th:if="${scoredJobs == null or #lists.isEmpty(scoredJobs)}"
+         style="text-align:center; padding:80px 24px; color:var(--text-muted);"
+         class="fade-in">
+        <div style="font-size:3rem; margin-bottom:16px;">🎯</div>
+        <h2 style="font-size:1.25rem; margin-bottom:8px; color:var(--text-secondary);">No matches yet</h2>
+        <p>Add more skills to your profile or check back when new jobs are posted.</p>
+        <div style="margin-top:24px; display:flex; gap:12px; justify-content:center;">
+            <a th:href="@{/profile}" class="btn btn-primary">Add Skills</a>
+            <a th:href="@{/jobs}"    class="btn btn-secondary">Browse All Jobs</a>
+        </div>
+    </div>
+
+    <!-- Matched jobs list -->
+    <div th:if="${scoredJobs != null and !#lists.isEmpty(scoredJobs)}">
+        <p class="text-secondary fade-in" style="margin-bottom:16px;">
+            Found <strong style="color:var(--text-primary);" th:text="${#lists.size(scoredJobs)}">0</strong> matching jobs
+        </p>
+
+        <div style="display:flex; flex-direction:column; gap:16px;">
+            <div class="card fade-in" th:each="sj, stat : ${scoredJobs}"
+                 th:style="'animation-delay: ' + (${stat.index} * 0.06) + 's'">
+
+                <div style="display:flex; gap:20px; align-items:flex-start;">
+
+                    <!-- Score circle -->
+                    <div style="flex-shrink:0; width:72px; height:72px; border-radius:50%;
+                                background: conic-gradient(var(--accent-blue) 0deg,
+                                rgba(255,255,255,0.05) 0deg);
+                                display:flex; align-items:center; justify-content:center;
+                                position:relative;">
+                        <div th:class="'score-badge ' + ${sj.scoreClass}"
+                             style="width:64px; height:64px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-direction:column;">
+                            <span style="font-size:1rem; font-weight:800;" th:text="${sj.formattedScore}">0%</span>
+                            <span style="font-size:0.6rem; opacity:0.7;">match</span>
+                        </div>
+                    </div>
+
+                    <!-- Job info -->
+                    <div style="flex:1; min-width:0;">
+                        <div class="flex justify-between items-center mb-8">
+                            <div class="job-title" th:text="${sj.job.title}">Title</div>
+                            <span class="badge badge-hired" th:text="${sj.job.status}">OPEN</span>
+                        </div>
+
+                        <div class="job-company mb-8" th:text="${sj.job.employer?.companyName ?: '—'}">Company</div>
+
+                        <div class="job-meta mb-16">
+                            <span>📍 <span th:text="${sj.job.location ?: 'Remote'}">Location</span></span>
+                            <span th:if="${sj.job.salaryRange != null}">💰 <span th:text="${sj.job.salaryRange}">Salary</span></span>
+                        </div>
+
+                        <!-- Required skills (highlight matched ones) -->
+                        <div class="skill-chips mb-16" th:if="${sj.job.requiredSkills != null}">
+                            <th:block th:each="skill : ${sj.job.requiredSkills}">
+                                <span th:class="${userSkills != null and userSkills.contains(skill)} ? 'chip chip-green' : 'chip chip-purple'"
+                                      th:text="${skill.skillName}">Skill</span>
+                            </th:block>
+                        </div>
+
+                        <div style="font-size:0.75rem; color:var(--text-muted);">
+                            ✅ Green = skills you have &nbsp;|&nbsp; 🟣 Purple = skills to learn
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="flex gap-8" style="margin-top:16px;">
+                            <a th:href="@{/jobs/{id}(id=${sj.job.jobId})}" class="btn btn-secondary btn-sm">View Details</a>
+                            <form th:action="@{/jobs/apply/{id}(id=${sj.job.jobId})}" method="post">
+                                <button type="submit" class="btn btn-primary btn-sm">Apply Now →</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

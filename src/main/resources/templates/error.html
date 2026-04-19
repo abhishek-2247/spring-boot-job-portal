@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Error — SkillConnect</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<nav class="navbar">
+    <a th:href="@{/}" class="navbar-brand"><span class="logo-icon">⚡</span> SkillConnect</a>
+    <ul class="navbar-nav">
+        <li><a th:href="@{/jobs}" class="nav-link">Browse Jobs</a></li>
+    </ul>
+</nav>
+
+<div class="page-content" style="max-width:600px; text-align:center; padding-top:80px;">
+    <div style="font-size:4rem; margin-bottom:24px;">⚠️</div>
+    <h1 class="page-title" style="margin-bottom:12px;">
+        <span th:text="${status ?: 'Error'}">Error</span> — Oops!
+    </h1>
+    <p class="text-secondary" style="margin-bottom:8px;" th:text="${error ?: 'Something went wrong.'}">Something went wrong.</p>
+    <p class="text-muted" style="font-size:0.85rem; margin-bottom:32px;" th:text="${message ?: ''}"></p>
+    <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
+        <a th:href="@{/}" class="btn btn-primary">🏠 Go Home</a>
+        <a th:href="@{/jobs}" class="btn btn-secondary">Browse Jobs</a>
+    </div>
+</div>
+</body>
+</html>
